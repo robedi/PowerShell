@@ -8,22 +8,22 @@
     It also handles database backups, file backups using `robocopy`, and places the Octopus server in and out of maintenance mode. 
     Additionally, it includes retry logic for placing Octopus out of maintenance mode in case of network or server issues.
     
-    .PARAMETER url
+    .VARIABLE url
     The URL of your Octopus Deploy portal.
 
-    .PARAMETER apiKey
+    .VARIABLE apiKey
     The API key to authenticate with the Octopus Deploy API.
 
-    .PARAMETER octopusDeployDatabaseName
+    .VARIABLE octopusDeployDatabaseName
     The name of the Octopus Deploy SQL database.
 
-    .PARAMETER sqlBackupFolderLocation
+    .VARIABLE sqlBackupFolderLocation
     The network share location where the SQL database backups will be stored.
 
-    .PARAMETER fileBackupLocation
+    .VARIABLE fileBackupLocation
     The network share location where file backups will be stored using `robocopy`.
 
-    .PARAMETER downloadDirectory
+    .VARIABLE downloadDirectory
     The location where the Octopus Deploy MSI installer files will be downloaded.
 
     .EXAMPLE
@@ -52,7 +52,6 @@ $octopusDeployDatabaseName = "OctopusDeploy" # TO DO: Change the database name, 
 $sqlBackupFolderLocation = "\\ServerStorage\Share\DatabaseBackup" # TO DO: Provide the network share to store the database backup
 $fileBackupLocation = "\\ServerStorage\Share\FileBackup" # TO DO: Provide the network share to store the file backup
 $downloadDirectory = "${env:Temp}" # TO DO: Alternatively, change and provide the network share where the Octopus update files are located.
-$settleTimeInMinutes = 30 # Configurable pause time between installations
 
 # This is the default install location, but yours could be different
 $installPath = "${env:ProgramFiles}\Octopus Deploy\Octopus"

@@ -7,6 +7,11 @@ This PowerShell script is designed to automate the process of upgrading an **Oct
 Below is a breakdown of how each part of the script works:
 
 ---
+### **Note**
+   - If you use a network share for storing backups, make sure to add the Octopus Deploy computer account to the network share with Full Control permissions.
+   - Test the upgrade process, using this script, on a test instance or server. After successful testing, perform the upgrade process on the main instance.
+   - If you need to verify that Octopus Deploy is working as expected, comment out the function `Set-OctopusOutOfMaintenanceMode` (line 276) to prevent automatic disabling of the maintenance mode.
+   - The module SqlServer will be installed and imported, if it is not present on the Octopus Deploy server. This is required to backup the database.
 
 ### 1. **Setup Configuration**
 Several variables are set at the beginning of the script. You'll need to replace placeholders with actual values for your environment.
@@ -17,7 +22,6 @@ Several variables are set at the beginning of the script. You'll need to replace
 - **$sqlBackupFolderLocation**: The location where the database backup will be stored.
 - **$fileBackupLocation**: The location where important files (logs, artifacts, telemetry) will be backed up.
 - **$downloadDirectory**: Directory where the MSI file (Octopus installer) will be downloaded. You can use a network share or the local temp directory (`${env:Temp}`).
-- **$settleTimeInMinutes**: Configurable pause between installations (default is 30 minutes).
 
 ### 2. **Get Latest Version Information**
 The script retrieves the current version of Octopus running on your server and checks for the latest available version from Octopus Deploy's download site.
@@ -46,7 +50,7 @@ if (-Not (Test-Path $destinationPath)) {
 ```
 
 ### 5. **Backing Up Server Folders**
-If the upgrade is a major version change, the script performs backups of key folders, such as logs, artifacts, telemetry, and packages, using the `robocopy` command.
+If the upgrade is a major version change, the script performs backups of key folders, such as logs, artifacts, telemetry, and packages, using the `robocopy` command. Before performing the backup, it will check if the directory is present. If not, it will skip to the next command. Not every version has or uses the same server folder structure.
 
 ```powershell
 if ($versionSplit[0] -ne $upgradeSplit[0]) {

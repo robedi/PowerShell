@@ -4,6 +4,12 @@
 
 This script automates the process of upgrading an Octopus Deploy server by downloading and applying a series of update files in a staged, incremental manner. The script ensures that the system is properly backed up before performing updates, places the server in maintenance mode during the upgrade process, and manages system restarts and maintenance status after each version upgrade.
 
+### **Note**
+   - If you use a network share for storing backups, make sure to add the Octopus Deploy computer account to the network share with Full Control permissions.
+   - Test the upgrade process, using this script, on a test instance or server. After successful testing, perform the upgrade process on the main instance.
+   - If you need to verify that Octopus Deploy is working as expected, comment out the function `Set-OctopusOutOfMaintenanceMode` (line 301) to prevent automatic disabling of the maintenance mode.
+   - The module SqlServer will be installed and imported, if it is not present on the Octopus Deploy server. This is required to backup the database.
+
 ### Key Sections of the Script
 
 1. **Variables and Configurations:**
@@ -34,7 +40,7 @@ This script automates the process of upgrading an Octopus Deploy server by downl
    The function returns `-1` if the current version is older, indicating that an upgrade is required.
 
 4. **$stagedVersions:**
-   `$stagedVersions` is an array of version files that the script will install incrementally. Each entry in the array represents a specific MSI installer file for a version of Octopus Deploy, starting with the oldest update:
+   `$stagedVersions` is an variable array of version files that the script will install incrementally. Each entry in the array represents a specific MSI installer file for a version of Octopus Deploy, starting with the oldest update:
    ```powershell
    $stagedVersions = @(
        "Octopus.2023.2.13580-x64.msi",
