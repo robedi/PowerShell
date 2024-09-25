@@ -10,28 +10,28 @@
     and the database, installs updates, and ensures the server exits maintenance mode. 
     It uses retry logic for network issues and pauses between updates to allow the server to settle.
 
-    .PARAMETER url
+    .VARIABLE url
     The URL of the Octopus Deploy Web Portal.
 
-    .PARAMETER apiKey
+    .VARIABLE apiKey
     The API key for accessing the Octopus Deploy API.
 
-    .PARAMETER octopusDeployDatabaseName
+    .VARIABLE octopusDeployDatabaseName
     The name of the Octopus Deploy database. If different from the default, this needs to be specified.
 
-    .PARAMETER sqlBackupFolderLocation
+    .VARIABLE sqlBackupFolderLocation
     The network share location where the database backups will be stored.
 
-    .PARAMETER fileBackupLocation
+    .VARIABLE fileBackupLocation
     The network share location where file backups will be stored.
 
-    .PARAMETER downloadDirectory
+    .VARIABLE downloadDirectory
     The network share location where the Octopus update files are downloaded.
 
-    .PARAMETER settleTimeInMinutes
+    .VARIABLE settleTimeInMinutes
     The pause time between installations in minutes. Default is 30 minutes.
 
-    .PARAMETER stagedVersions
+    .VARIABLE stagedVersions
     The purpose of the "stagedVersions" is to store an array of filenames that represent different versions of the 
     Octopus Deploy MSI installer files. These filenames correspond to specific versions of the Octopus Deploy software 
     that will be downloaded and installed sequentially during an incremental update process.
