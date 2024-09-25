@@ -1,4 +1,5 @@
 # Change Log
+[![Changelog](https://common-changelog.org/badge.svg)](https://common-changelog.org)
 All notable changes to this repository will be documented in this file.
 
 ## 2024-09-25
