@@ -52,10 +52,13 @@ This script automates the process of upgrading an Octopus Deploy server by downl
    ```
    **Purpose of `$stagedVersions`:**  
    This array defines the sequence of versions to be applied to the Octopus Deploy server. The script downloads and installs each version in the list, ensuring that no update is skipped. This staged upgrade ensures the server progresses smoothly from its current version to the most recent one, handling incremental changes that may be required between major versions.
+   
    How to build the variable array, to match your current Octopus Deploy environment:
-   1. ...
-		- ...
-		- ...
+   - Browse to [Octopus Server Release History](https://octopus.com/downloads/previous) and scroll down to your currently installed version (e.g. **2019.11.3**).
+		- To allow restore possibilities, I would recommend performing minor version upgrades (e.g. **2019.11.x** to **2019.12.x**) and focussing the latest minor version (e.g. **2019.12.14**).
+		- Read [Upgrading minor releases](https://octopus.com/docs/administration/upgrading/guide/upgrading-minor-and-patch-releases#rollback-failed-upgrade) for more information on to perform a rollback.
+   - Add every last update from each minor version to the **$stagedVersions:** variable array, with the oldest version on top and the most recent last in the array.
+   - Save the script and double check for any mistakes or typos.
 
 5. **Backup Process:**
    Before upgrading the server, the script checks if the version upgrade is significant (i.e., major version upgrade) and backs up the critical files, such as artifacts, logs, packages, and telemetry data. These files are copied to a backup location using `robocopy`:
