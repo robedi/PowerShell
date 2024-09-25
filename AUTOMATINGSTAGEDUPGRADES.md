@@ -52,6 +52,10 @@ This script automates the process of upgrading an Octopus Deploy server by downl
    ```
    **Purpose of `$stagedVersions`:**  
    This array defines the sequence of versions to be applied to the Octopus Deploy server. The script downloads and installs each version in the list, ensuring that no update is skipped. This staged upgrade ensures the server progresses smoothly from its current version to the most recent one, handling incremental changes that may be required between major versions.
+   How to build the variable array, to match your current Octopus Deploy environment:
+   1. ...
+		- ...
+		- ...
 
 5. **Backup Process:**
    Before upgrading the server, the script checks if the version upgrade is significant (i.e., major version upgrade) and backs up the critical files, such as artifacts, logs, packages, and telemetry data. These files are copied to a backup location using `robocopy`:
