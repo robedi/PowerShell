@@ -93,14 +93,7 @@ Once the upgrade is complete, the script restarts the Octopus service to ensure 
 & $serverExe service --instance="OctopusServer" --start
 ```
 
-### 10. **Settle Time**
-The script includes a configurable pause (`$settleTimeInMinutes`, default 30 minutes) between installations to allow the server to stabilize before proceeding to the next step.
-
-```powershell
-Start-Sleep -Seconds ($settleTimeInMinutes * 60)
-```
-
-### 11. **Clean Up**
+### 10. **Clean Up**
 Finally, the downloaded MSI installer is deleted to free up space:
 
 ```powershell
