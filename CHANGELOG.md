@@ -7,8 +7,8 @@ All notable changes to this repository will be documented in this file.
 
 ### Added
 - Added new files to automate the process for installing and configuring the Zabbix Agent on Microsoft-based machines
-  - [Install-ZabbixAgent.ps1](https://github.com/RoBeDi/PowerShell/blob/master/Zabbix/Install-ZabbixAgent.ps1)
-  - [Install-ZabbixAgent-Intune.ps1](https://github.com/RoBeDi/PowerShell/blob/master/Zabbix/Install-ZabbixAgent-Intune.ps1)
+  - [Install-ZabbixAgent.ps1](https://github.com/RoBeDi/PowerShell/blob/master/Zabbix/Install-ZabbixAgent.ps1) for domain-joined machines
+  - [Install-ZabbixAgent-Intune.ps1](https://github.com/RoBeDi/PowerShell/blob/master/Zabbix/Install-ZabbixAgent-Intune.ps1) for Intune-enrolled machines
  
 ### Changed
 - Updated the Wiki page
