@@ -161,6 +161,11 @@ function Ensure-PackageProvider {
     }
 }
 
+# Check if the script is running in elevated mode (as Administrator)
+If (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Warning "This script requires elevated privileges (Run as Administrator)."
+    exit
+}
 
 cls
 Write-Host "STATUS:"
