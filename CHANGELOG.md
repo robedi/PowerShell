@@ -6,7 +6,9 @@ All notable changes to this repository will be documented in this file.
 ## 2024-09-27
 
 ### Changed
-- Added command to [Install-ZabbixAgent.ps1](https://github.com/RoBeDi/PowerShell/blob/master/Zabbix/Install-ZabbixAgent.ps1) and [Install-ZabbixAgent-Intune.ps1](https://github.com/RoBeDi/PowerShell/blob/master/Zabbix/Install-ZabbixAgent-Intune.ps1) to confirm if the script is running in elevated mode
+- [Install-ZabbixAgent.ps1](https://github.com/RoBeDi/PowerShell/blob/master/Zabbix/Install-ZabbixAgent.ps1) and [Install-ZabbixAgent-Intune.ps1](https://github.com/RoBeDi/PowerShell/blob/master/Zabbix/Install-ZabbixAgent-Intune.ps1)
+  - Added command to the scripts to confirm if the script is running in elevated mode
+  - Improved function blocks 'Ensure-Module' and 'Ensure-PackageProvider'
 
 ## 2024-09-26
 
