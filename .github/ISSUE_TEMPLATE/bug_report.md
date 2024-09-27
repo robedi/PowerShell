@@ -15,7 +15,7 @@ Steps to reproduce the behavior:
 1. Execute script '...'
 2. Normal execution
 3. See error
-4. run as Administrator
+4. Run as Administrator
 5. See error
 
 **Expected behavior**
