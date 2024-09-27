@@ -119,25 +119,53 @@ function Start-ZabbixAgentService {
     }
     Write-Host "Service $ServiceName is running."
 }
+
 function Ensure-Module {
     param (
         [string]$ModuleName
     )
 
+    # Check if the module is installed
     $module = Get-Module -ListAvailable -Name $ModuleName
     if ($null -eq $module) {
-        Write-Output "Installing module $ModuleName..."
+        Write-Output "Module $ModuleName is not installed. Installing..."
         Install-Module -Name $ModuleName -Force -AllowClobber
     } else {
-        $latestVersion = Find-Module -Name $ModuleName | Select-Object -ExpandProperty Version
+        # Get the latest version of the module from the online gallery
+        $latestModule = Find-Module -Name $ModuleName
+        $latestVersion = $latestModule.Version
         $installedVersion = $module.Version
 
-        if ($installedVersion -lt $latestVersion) {
-            Write-Output "Updating module $ModuleName from version $installedVersion to $latestVersion..."
-            Update-Module -Name $ModuleName -Force
+        # Check if the module was installed using Install-Module
+        $installSource = (Get-InstalledModule -Name $ModuleName -ErrorAction SilentlyContinue)
+
+        # If the module was not installed via Install-Module, uninstall it first
+        if ($null -eq $installSource) {
+            Write-Output "Module $ModuleName was not installed via Install-Module. Uninstalling and reinstalling the latest version..."
+            # Uninstall the existing module first
+            Remove-Module -Name $ModuleName -Force -ErrorAction SilentlyContinue
+            Uninstall-Module -Name $ModuleName -AllVersions -Force -ErrorAction SilentlyContinue
+
+            # Install the latest version of the module
+            Install-Module -Name $ModuleName -Force -AllowClobber
         } else {
-            Write-Output "Module $ModuleName is up-to-date (version $installedVersion)."
+            # Compare installed version with the latest version
+            if ($installedVersion -lt $latestVersion) {
+                Write-Output "Updating module $ModuleName from version $installedVersion to version $latestVersion..."
+                Update-Module -Name $ModuleName -Force
+            } else {
+                Write-Output "Module $ModuleName is already up-to-date (version $installedVersion)."
+            }
         }
+    }
+
+    # Check if the module needs to be imported into the current session
+    $importedModule = Get-Module -Name $ModuleName
+    if ($null -eq $importedModule) {
+        Write-Output "Module $ModuleName is not imported in the current session. Importing..."
+        Import-Module -Name $ModuleName -Force
+    } else {
+        Write-Output "Module $ModuleName is already imported in the current session."
     }
 }
 
@@ -147,12 +175,24 @@ function Ensure-PackageProvider {
         [string]$MinimumVersion
     )
 
+    # Check if the package provider is installed
     $installedProvider = Get-PackageProvider -Name $ProviderName -ErrorAction SilentlyContinue
-    if ($null -eq $installedProvider -or $installedProvider.Version -lt $MinimumVersion) {
-        Write-Host "Installing/Updating $ProviderName to at least version $MinimumVersion..."
+
+    if ($null -eq $installedProvider) {
+        Write-Host "Package provider $ProviderName not found. Installing version $MinimumVersion or higher..."
         Install-PackageProvider -Name $ProviderName -MinimumVersion $MinimumVersion -Force -Confirm:$false
     } else {
-        Write-Host "$ProviderName is already installed and meets the minimum version requirement."
+        $installedVersion = $installedProvider.Version
+        [version]$minimumRequiredVersion = [version]$MinimumVersion
+
+        # Check if the installed version meets the minimum required version
+        if ($installedVersion -lt $minimumRequiredVersion) {
+            Write-Host "$ProviderName is installed, but version $installedVersion is less than the minimum required version $MinimumVersion."
+            Write-Host "Updating $ProviderName to at least version $MinimumVersion..."
+            Install-PackageProvider -Name $ProviderName -MinimumVersion $MinimumVersion -Force -Confirm:$false
+        } else {
+            Write-Host "$ProviderName is already installed and meets the minimum version requirement (version $installedVersion)."
+        }
     }
 }
 
@@ -171,10 +211,9 @@ Stop-ZabbixAgentService -ServiceName $ServiceName
 
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-Install-Module PowerShellGet -Force -AllowClobber
-Install-Module Microsoft.PowerShell.PSResourceGet -Repository PSGallery -Force -AllowClobber
-#Ensure-Module -ModuleName "PowerShellGet"
-#Ensure-Module -ModuleName "PackageManagement"
+Ensure-Module -ModuleName "PowerShellGet"
+Ensure-Module -ModuleName "PackageManagement"
+Ensure-Module -ModuleName "Microsoft.PowerShell.PSResourceGet"
 Ensure-PackageProvider -ProviderName "NuGet" -MinimumVersion $nuGetProviderMinVersion
 
 #Downloading the correct ZABBIX version for the system architecture
