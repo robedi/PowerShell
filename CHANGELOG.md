@@ -3,6 +3,12 @@
 
 All notable changes to this repository will be documented in this file.
 
+## 2024-09-30
+
+### Added
+- Added new script for resetting Microsoft Update on Microsoft-based machines (Windows 10 and 11)
+  - [Reset-WindowsUpdate.ps1](https://github.com/RoBeDi/PowerShell/blob/master/Microsoft/Reset-WindowsUpdate.ps1)
+
 ## 2024-09-27
 
 ### Changed
