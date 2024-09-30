@@ -21,6 +21,12 @@ V2.00, 09/30/2024 - Updated for compatibility with Windows 10 and 11
 
 cls 
 
+# Check if the script is running in elevated mode (as Administrator)
+If (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Warning "This script requires elevated privileges (Run as Administrator)."
+    exit
+}
+
 $arch = Get-WMIObject -Class Win32_Processor -ComputerName LocalHost | Select-Object AddressWidth 
 
 Write-Host "1. Stopping Windows Update Services..." 
