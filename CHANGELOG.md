@@ -7,6 +7,7 @@ All notable changes to this repository will be documented in this file.
 
 ### Added
 - Added Zabbix Agent configuration file for Intune deployments
+- Added Rosetta 2 script for macOS machines managed using Intune
 
 ### Changed
 - Updated the process for installing and configuring the Zabbix Agent on Microsoft-based machines
