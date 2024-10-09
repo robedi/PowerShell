@@ -67,14 +67,7 @@ $Model = $osInfo.ProductType
 $ServiceName = 'Zabbix Agent'
 $version = "7.0.4"
 $AgentConfFile = "C:\Program Files\Zabbix Agent\zabbix_agentd.conf"
-$templatePath = "\\FQDN\SHARE\template_zabbix_agentd.conf"
-
-$sourceFilePath = $templatePath
 $destinationFilePath = "C:\Program Files\Zabbix Agent\template_zabbix_agentd.conf"
-$username = Read-Host "Enter username (domain\username)"
-$password = Read-Host "Enter password" -AsSecureString
-$credential = New-Object System.Management.Automation.PSCredential ($username, $password)
-$netDrive = "Z"
 
 function Stop-ZabbixAgentService {
     param (
@@ -222,14 +215,16 @@ Ensure-PackageProvider -ProviderName "NuGet" -MinimumVersion $nuGetProviderMinVe
 
 #Downloading the correct ZABBIX version for the system architecture
 if ($env:PROCESSOR_ARCHITECTURE -eq "AMD64") {
-#Downloading the correct ZABBIX version for the system architecture
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+#Downloading the correct ZABBIX version for the 64-bit architecture
 Invoke-WebRequest -Uri "https://cdn.zabbix.com/zabbix/binaries/stable/7.0/$version/zabbix_agent-$version-windows-amd64-openssl.msi"  -OutFile "$env:TEMP\ZabbixAgent-v$version.msi"
 } else {
-# Version for 32-bit architecture
-[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+#Downloading the correct ZABBIX version for the 32-bit architecture
 Invoke-WebRequest -Uri "https://cdn.zabbix.com/zabbix/binaries/stable/7.0/$version/zabbix_agent-$version-windows-i386-openssl.msi" -OutFile "$env:TEMP\ZabbixAgent-v$version.msi"
 }
+
+#Download template of ZABBIX Configuration file
+Invoke-WebRequest -Uri "https://github.com/RoBeDi/PowerShell/raw/refs/heads/master/Zabbix/Intune/template_zabbix_agentd.conf" -OutFile "$env:TEMP\template_zabbix_agentd.conf"
+
 #Install the downloaded version of ZABBIX for the appropriate system architecture
 Start-Process -FilePath "$env:TEMP\ZabbixAgent-v$version.msi" -ArgumentList "/qn SERVER=$ZabbixServer SERVERACTIVE=$ZabbixServerActive HOSTNAME=$env:computername ListenPort=$ListenPort EnablePath=$EnablePath" -Wait
 
@@ -241,9 +236,7 @@ Write-Host "... " -NoNewline
 Write-Host "DONE" -ForegroundColor Green
 
 Get-ChildItem $AgentConfFile | Rename-Item -NewName {$_.BaseName + "_" + (Get-Date -F ddMMyyyy_HHmm) + $_.Extension}
-New-PSDrive -Name $netDrive -PSProvider FileSystem -Root "\\FQDN\SHARE" -Credential $credential -Persist
-Copy-Item -Path "Z:\template_zabbix_agentd.conf" -Destination $AgentConfFile -Force
-Remove-PSDrive -Name $netDrive -Force
+Copy-Item -Path "$env:TEMP\template_zabbix_agentd.conf" -Destination $AgentConfFile -Force
 
 Start-Sleep -Seconds 2
 Write-Host "Writing variables into Zabbix Agent config file " -NoNewline
