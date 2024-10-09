@@ -3,6 +3,16 @@
 
 All notable changes to this repository will be documented in this file.
 
+## 2024-10-09
+
+### Added
+- Added Zabbix Agent configuration file for Intune deployments
+
+### Changed
+- Updated the process for installing and configuring the Zabbix Agent on Microsoft-based machines
+- Script is no longer depended on a onpremise file share and will download the template file from GitHub
+  - [Install-ZabbixAgent-Intune.ps1](https://github.com/RoBeDi/PowerShell/blob/master/Zabbix/Install-ZabbixAgent-Intune.ps1) for Intune-enrolled machines
+
 ## 2024-09-30
 
 ### Added
