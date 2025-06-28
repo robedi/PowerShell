@@ -17,9 +17,9 @@ function Log-Message {
 # Default instance service name: MSSQLSERVER
 # Express service name: MSSQL$SQLEXPRESS
 
-$machine      = $env:COMPUTERNAME
-$defaultSvc   = Get-Service -Name 'MSSQLSERVER'    -ErrorAction SilentlyContinue
-$expressSvc   = Get-Service -Name 'MSSQL$SQLEXPRESS' -ErrorAction SilentlyContinue
+$machine = $env:COMPUTERNAME
+$defaultSvc = Get-Service -Name 'MSSQLSERVER' -ErrorAction SilentlyContinue
+$expressSvc = Get-Service -Name 'MSSQL$SQLEXPRESS' -ErrorAction SilentlyContinue
 
 if ($defaultSvc -and $defaultSvc.Status -eq 'Running') {
     $server = "localhost" # use default instance
@@ -33,9 +33,9 @@ else {
     throw "No running SQL Server or SQLExpress instance found on $machine"
 }
 
-$csvFolder        = "C:\Scripts\CSV"
-$database         = "BrianDatabase"
-$logFile          = "C:\Scripts\import_log.txt"
+$csvFolder = "C:\Scripts\CSV"
+$database = "BrianDatabase"
+$logFile = "C:\Scripts\import_log.txt"
 $connectionString = "Server=$server;Database=$database;Trusted_Connection=True;"
 
 # ----------------------------------------------------------------
