@@ -1,4 +1,53 @@
-﻿#Set-ExecutionPolicy -Scope Process -ExecutionPolicy Unrestricted -Force
+﻿<#
+    .SYNOPSIS
+        Incrementally imports “pivot” CSV files into SQL Server tables, tracking processed files.
+
+    .DESCRIPTION
+        This script scans a specified folder for CSV files whose names contain “pivot”.  
+        It detects whether each file is new or has been updated since the last import by comparing file timestamps against entries in a metadata table (CsvImportLog).  
+        On first run, it drops and recreates the target tables; on subsequent runs, it only deletes rows for the affected year before re‐importing the changed file, preventing duplicates.  
+        It auto-detects your SQL instance (default vs. SQLEXPRESS), ensures the database and tracking table exist, creates any missing pivot tables with proper data types, bulk-loads the data with progress bars, and logs all operations.
+
+    .PARAMETER csvFolder
+        Path to the directory containing the pivot CSV files (e.g. "C:\Scripts\CSV").
+
+    .PARAMETER server
+        SQL Server instance name to connect to (auto-detected as default or SQLEXPRESS).
+
+    .PARAMETER database
+        Target database name where pivot tables and CsvImportLog reside.
+
+    .PARAMETER logFile
+        File path for writing the import log.
+
+    .PARAMETER connectionString
+        ADO.NET connection string built from $server and $database for all SQL operations.
+
+    .EXAMPLE
+        PS> .\Import-PivotCSVs.ps1
+
+        Runs the script against the default-configured folder and SQL instance.  
+        On first run, drops any existing pivot tables and imports all CSVs.  
+        On later runs, only re-imports files that have changed, updating the metadata log.
+
+    .INPUTS
+        None.  The script does not accept pipeline input.
+
+    .OUTPUTS
+        — Creates or updates SQL tables under dbo.<PivotName>  
+        — Writes detailed progress and errors to both the console and the $logFile  
+        — Maintains dbo.CsvImportLog to record each CSV’s LastWriteTime
+
+    .NOTES
+        FunctionName : 
+        Created by   : rvtkr
+        Date Coded   : 06/28/2025 23:58:37
+
+    .LINK
+        https://github.com/RoBeDi/PowerShell/
+ #>
+
+#Set-ExecutionPolicy -Scope Process -ExecutionPolicy Unrestricted -Force
 cls
 
 # ----------------------------------------------------------------
