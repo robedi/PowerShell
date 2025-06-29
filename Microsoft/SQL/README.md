@@ -43,15 +43,15 @@ Tracks processed files in a metadata table (`CsvImportLog`) and only re‐import
 
 1. Clone or download this repository:  
 ```bash
-   git clone https://github.com/your-org/pivot-csv-importer.git
-   cd pivot-csv-importer
+git clone https://github.com/your-org/pivot-csv-importer.git
+cd pivot-csv-importer
 ````
 
 2. (Optional) Adjust your execution policy if needed:
 
-   ```powershell
-   Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force
-   ```
+```powershell
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force
+```
 
 ---
 
@@ -103,6 +103,9 @@ Run the script from PowerShell:
 
 # If you want verbose console output:
 .\Import-PivotCSVs.ps1 -Verbose
+
+#If you want to run this from a PowerShell Command Line:
+powershell -NoProfile -ExecutionPolicy Bypass -File "C:\Scripts\Import-PivotCSVs.ps1"
 ```
 
 ---
