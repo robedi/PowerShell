@@ -1,4 +1,3 @@
-````markdown
 # Pivot CSV Importer
 
 A PowerShell utility to incrementally import “pivot” CSV files into SQL Server (default or SQLEXPRESS) tables.  
@@ -43,7 +42,7 @@ Tracks processed files in a metadata table (`CsvImportLog`) and only re‐import
 ## Installation
 
 1. Clone or download this repository:  
-   ```bash
+```bash
    git clone https://github.com/your-org/pivot-csv-importer.git
    cd pivot-csv-importer
 ````
