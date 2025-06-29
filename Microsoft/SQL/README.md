@@ -104,7 +104,7 @@ Run the script from PowerShell:
 # If you want verbose console output:
 .\Import-PivotCSVs.ps1 -Verbose
 
-#If you want to run this from a PowerShell Command Line:
+# If you want to run this from a PowerShell Command Line:
 powershell -NoProfile -ExecutionPolicy Bypass -File "C:\Scripts\Import-PivotCSVs.ps1"
 ```
 

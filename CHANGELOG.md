@@ -3,6 +3,11 @@
 
 All notable changes to this repository will be documented in this file.
 
+## 2025-06-29
+
+### Added
+- Added PowerShell script for importing CSV files into SQL Database
+
 ## 2024-10-09
 
 ### Added
