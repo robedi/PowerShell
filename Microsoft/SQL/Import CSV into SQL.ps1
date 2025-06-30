@@ -52,6 +52,8 @@ cls
 
 # ----------------------------------------------------------------
 
+$logFile = "C:\Scripts\import_log.txt"
+
 function Log-Message {
     param([string]$message)
     $timestamp   = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
@@ -84,7 +86,6 @@ else {
 
 $csvFolder = "C:\Scripts\CSV"
 $database = "BrianDatabase"
-$logFile = "C:\Scripts\import_log.txt"
 $connectionString = "Server=$server;Database=$database;Trusted_Connection=True;"
 
 # ----------------------------------------------------------------
