@@ -18,6 +18,9 @@ This PowerShell script automates the detection, installation, and configuration 
 
 ## 🔧 Parameters
 
+> [!NOTE]
+> Change the IP Addresses, port (if not default) and Metadata to match your environment.
+
 | Parameter            | Description                                                      |
 | -------------------- | ---------------------------------------------------------------- |
 | `ZabbixServer`       | IP address of Zabbix server. Default: `10.30.8.4`                |
@@ -35,19 +38,19 @@ This PowerShell script automates the detection, installation, and configuration 
 ### Run directly with PowerShell:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File Install-ZabbixAgent.ps1
+powershell -ExecutionPolicy Bypass -File Install-ZabbixAgent-Online.ps1
 ```
 
 ### From network share:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File "\\myserver\scripts\Install-ZabbixAgent.ps1"
+powershell -ExecutionPolicy Bypass -File "\\myserver\scripts\Install-ZabbixAgent-Online.ps1"
 ```
 
 ### With custom parameters:
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File Install-ZabbixAgent.ps1 -ZabbixServer "192.168.1.10" -ForceAgent "Agent2"
+powershell -ExecutionPolicy Bypass -File Install-ZabbixAgent-Online.ps1 -ZabbixServer "192.168.1.10" -ForceAgent "Agent2"
 ```
 
 ---
