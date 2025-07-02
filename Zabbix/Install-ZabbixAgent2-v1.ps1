@@ -64,10 +64,12 @@ $HostInterface = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.Addre
 $osInfo = Get-CimInstance -ClassName Win32_OperatingSystem
 $Model = $osInfo.ProductType
 $ServiceName = 'Zabbix Agent 2'
-$version = "7.2.2"
+$release = "7.4.0"
+$version = ($release -split '\.')[0..1] -join '.'
 $packageManagementMinVersion = "1.4.7"
 $powerShellGetMinVersion = "2.0.0"
 $nuGetProviderMinVersion = "2.8.5.201"
+$toolsPath = "C:\Tools"
 $AgentConfFile = "C:\Program Files\Zabbix Agent 2\zabbix_agent2.conf"
 $templatePath = "\\DK-CPH-FILE\Zabbix\template_zabbix_agent2.conf" 
 
@@ -156,9 +158,12 @@ function Ensure-PackageProvider {
     }
 }
 
-# Check if the script is running in elevated mode (as Administrator)
-If (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Warning "This script requires elevated privileges (Run as Administrator)."
+# Relaunch in elevated ISE if not already running as admin
+if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Warning "This script requires elevated privileges (Run as Administrator). Relaunching in elevated PowerShell ISE..."
+    
+    $script = $MyInvocation.MyCommand.Path
+    Start-Process powershell_ise.exe -Verb RunAs -ArgumentList "`"$script`""
     exit
 }
 
@@ -177,16 +182,24 @@ Install-Module Microsoft.PowerShell.PSResourceGet -Repository PSGallery -Force -
 #Ensure-Module -ModuleName "PackageManagement"
 Ensure-PackageProvider -ProviderName "NuGet" -MinimumVersion $nuGetProviderMinVersion
 
+if (-not (Test-Path -Path $toolsPath -PathType Container)) {
+    New-Item -Path $toolsPath -ItemType Directory -Force | Out-Null
+    Write-Host "Directory created: $toolsPath"
+} else {
+    Write-Host "Directory already exists: $toolsPath"
+}
+
 #Downloading the correct ZABBIX version for the system architecture
 if ($env:PROCESSOR_ARCHITECTURE -eq "AMD64") {
 #Downloading the correct ZABBIX version for the system architecture
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-Invoke-WebRequest -Uri "https://cdn.zabbix.com/zabbix/binaries/stable/7.2/$version/zabbix_agent2-$version-windows-amd64-openssl.msi"  -OutFile "C:\Tools\ZabbixAgent2-v$version.msi"
+Invoke-WebRequest -Uri "https://cdn.zabbix.com/zabbix/binaries/stable/$version/$release/zabbix_agent2-$release-windows-amd64-openssl.msi"  -OutFile "C:\Tools\ZabbixAgent2-v$release.msi"
 } else {
 # Version for 32-bit architecture
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-Invoke-WebRequest -Uri "https://cdn.zabbix.com/zabbix/binaries/stable/7.2/$version/zabbix_agent2-$version-windows-i386-openssl.msi" -OutFile "C:\Tools\ZabbixAgent2-v$version.msi"
+Invoke-WebRequest -Uri "https://cdn.zabbix.com/zabbix/binaries/stable/$version/$release/zabbix_agent2-$release-windows-i386-openssl.msi" -OutFile "C:\Tools\ZabbixAgent2-v$release.msi"
 }
+
 #Install the downloaded version of ZABBIX for the appropriate system architecture
 Start-Process -FilePath "C:\Tools\ZabbixAgent2-v$version.msi" -ArgumentList "/qn SERVER=$ZabbixServer SERVERACTIVE=$ZabbixServerActive HOSTNAME=$env:computername ListenPort=$ListenPort EnablePath=$EnablePath" -Wait
 
@@ -195,7 +208,7 @@ Stop-ZabbixAgentService -ServiceName $ServiceName
 
 ############ UPDATE ZABBIX CONFIG FILE #################
 Start-Sleep -Seconds 5
-Write-Host "Reconfiguring Zabbix Agent " -NoNewline
+Write-Host "Reconfiguring Zabbix Agent 2" -NoNewline
 
 Get-ChildItem $AgentConfFile | Rename-Item -NewName {$_.BaseName + "_" + (Get-Date -F ddMMyyyy_HHmm) + $_.Extension}
 Copy-Item -Path $templatePath -Destination "C:\Program Files\Zabbix Agent 2\zabbix_agent2.conf" -Force

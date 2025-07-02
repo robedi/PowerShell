@@ -1,4 +1,5 @@
-﻿<#
+﻿#Set-ExecutionPolicy -Scope Process -ExecutionPolicy Unrestricted -Force
+<#
     .SYNOPSIS
     This script automates the installation and configuration of the Zabbix Agent on a Windows machine.
 
@@ -46,9 +47,9 @@
 [CmdletBinding()]
 param (
 [Parameter()]
-[string]$ZabbixServer = '[Zabbix_Server_IP]',
+[string]$ZabbixServer = '10.30.8.4',
 [Parameter()]
-[string]$ZabbixServerActive = '[Zabbix_Server_IP]',
+[string]$ZabbixServerActive = '10.30.8.4',
 [Parameter()]
 [string]$ListenPort = '10050',
 [Parameter()]
@@ -64,12 +65,14 @@ $HostInterface = (Get-NetIPAddress -AddressFamily IPv4 | Where-Object { $_.Addre
 $osInfo = Get-CimInstance -ClassName Win32_OperatingSystem
 $Model = $osInfo.ProductType
 $ServiceName = 'Zabbix Agent'
-$version = "7.0.4"
+$release = "7.4.0"
+$version = ($release -split '\.')[0..1] -join '.'
 $packageManagementMinVersion = "1.4.7"
 $powerShellGetMinVersion = "2.0.0"
 $nuGetProviderMinVersion = "2.8.5.201"
+$toolsPath = "C:\Tools"
 $AgentConfFile = "C:\Program Files\Zabbix Agent\zabbix_agentd.conf"
-$templatePath = "\\FILESERVER\SHARE\template_zabbix_agentd.conf" 
+$templatePath = "\\DK-CPH-FILE\Zabbix\template_zabbix_agentd.conf" 
 
 function Stop-ZabbixAgentService {
     param (
@@ -79,23 +82,24 @@ function Stop-ZabbixAgentService {
     
     # Check if the service exists
     $service = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
+
     if ($null -eq $service) {
         Write-Host "Service $ServiceName does not exist. Skipping..." -ForegroundColor Red
         return
-    }
-    
-    # Stop the service
-    Write-Host "Stopping the service: $ServiceName"
-    Stop-Service -Name $ServiceName -Force
+    } else {
+        # Stop the service
+        Write-Host "Stopping the service: $ServiceName"
+        Stop-Service -Name $ServiceName -Force
 
-    # Confirm the service has stopped
-    $service = Get-Service -Name $ServiceName
-    while ($service.Status -ne 'Stopped') {
-        Write-Host "Waiting for service to stop..."
-        Start-Sleep -Seconds 2
+        # Confirm the service has stopped
         $service = Get-Service -Name $ServiceName
+        while ($service.Status -ne 'Stopped') {
+            Write-Host "Waiting for service to stop..."
+            Start-Sleep -Seconds 2
+            $service = Get-Service -Name $ServiceName
+        }
+        Write-Host "Service $ServiceName has stopped."
     }
-    Write-Host "Service $ServiceName has stopped."
 }
 
 
@@ -119,53 +123,25 @@ function Start-ZabbixAgentService {
     }
     Write-Host "Service $ServiceName is running."
 }
-
 function Ensure-Module {
     param (
         [string]$ModuleName
     )
 
-    # Check if the module is installed
     $module = Get-Module -ListAvailable -Name $ModuleName
     if ($null -eq $module) {
-        Write-Output "Module $ModuleName is not installed. Installing..."
+        Write-Output "Installing module $ModuleName..."
         Install-Module -Name $ModuleName -Force -AllowClobber
     } else {
-        # Get the latest version of the module from the online gallery
-        $latestModule = Find-Module -Name $ModuleName
-        $latestVersion = $latestModule.Version
+        $latestVersion = Find-Module -Name $ModuleName | Select-Object -ExpandProperty Version
         $installedVersion = $module.Version
 
-        # Check if the module was installed using Install-Module
-        $installSource = (Get-InstalledModule -Name $ModuleName -ErrorAction SilentlyContinue)
-
-        # If the module was not installed via Install-Module, uninstall it first
-        if ($null -eq $installSource) {
-            Write-Output "Module $ModuleName was not installed via Install-Module. Uninstalling and reinstalling the latest version..."
-            # Uninstall the existing module first
-            Remove-Module -Name $ModuleName -Force -ErrorAction SilentlyContinue
-            Uninstall-Module -Name $ModuleName -AllVersions -Force -ErrorAction SilentlyContinue
-
-            # Install the latest version of the module
-            Install-Module -Name $ModuleName -Force -AllowClobber
+        if ($installedVersion -lt $latestVersion) {
+            Write-Output "Updating module $ModuleName from version $installedVersion to $latestVersion..."
+            Update-Module -Name $ModuleName -Force
         } else {
-            # Compare installed version with the latest version
-            if ($installedVersion -lt $latestVersion) {
-                Write-Output "Updating module $ModuleName from version $installedVersion to version $latestVersion..."
-                Update-Module -Name $ModuleName -Force
-            } else {
-                Write-Output "Module $ModuleName is already up-to-date (version $installedVersion)."
-            }
+            Write-Output "Module $ModuleName is up-to-date (version $installedVersion)."
         }
-    }
-
-    # Check if the module needs to be imported into the current session
-    $importedModule = Get-Module -Name $ModuleName
-    if ($null -eq $importedModule) {
-        Write-Output "Module $ModuleName is not imported in the current session. Importing..."
-        Import-Module -Name $ModuleName -Force
-    } else {
-        Write-Output "Module $ModuleName is already imported in the current session."
     }
 }
 
@@ -175,30 +151,21 @@ function Ensure-PackageProvider {
         [string]$MinimumVersion
     )
 
-    # Check if the package provider is installed
     $installedProvider = Get-PackageProvider -Name $ProviderName -ErrorAction SilentlyContinue
-
-    if ($null -eq $installedProvider) {
-        Write-Host "Package provider $ProviderName not found. Installing version $MinimumVersion or higher..."
+    if ($null -eq $installedProvider -or $installedProvider.Version -lt $MinimumVersion) {
+        Write-Host "Installing/Updating $ProviderName to at least version $MinimumVersion..."
         Install-PackageProvider -Name $ProviderName -MinimumVersion $MinimumVersion -Force -Confirm:$false
     } else {
-        $installedVersion = $installedProvider.Version
-        [version]$minimumRequiredVersion = [version]$MinimumVersion
-
-        # Check if the installed version meets the minimum required version
-        if ($installedVersion -lt $minimumRequiredVersion) {
-            Write-Host "$ProviderName is installed, but version $installedVersion is less than the minimum required version $MinimumVersion."
-            Write-Host "Updating $ProviderName to at least version $MinimumVersion..."
-            Install-PackageProvider -Name $ProviderName -MinimumVersion $MinimumVersion -Force -Confirm:$false
-        } else {
-            Write-Host "$ProviderName is already installed and meets the minimum version requirement (version $installedVersion)."
-        }
+        Write-Host "$ProviderName is already installed and meets the minimum version requirement."
     }
 }
 
-# Check if the script is running in elevated mode (as Administrator)
-If (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-    Write-Warning "This script requires elevated privileges (Run as Administrator)."
+# Relaunch in elevated ISE if not already running as admin
+if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Warning "This script requires elevated privileges (Run as Administrator). Relaunching in elevated PowerShell console..."
+    
+    $script = $MyInvocation.MyCommand.Path
+    Start-Process powershell.exe -Verb RunAs -ArgumentList "-File `"$script`""
     exit
 }
 
@@ -207,27 +174,38 @@ Write-Host "STATUS:"
 Write-Host " "
 Write-Host "Script started at $(Get-Date)"
 
-Stop-ZabbixAgentService -ServiceName $ServiceName
+if (Get-Service -Name $ServiceName -ErrorAction SilentlyContinue) {
+    Stop-ZabbixAgentService -ServiceName $ServiceName
+}
 
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
-Ensure-Module -ModuleName "PowerShellGet"
-Ensure-Module -ModuleName "PackageManagement"
-Ensure-Module -ModuleName "Microsoft.PowerShell.PSResourceGet"
+Install-Module PowerShellGet -Force -AllowClobber
+Install-Module Microsoft.PowerShell.PSResourceGet -Repository PSGallery -Force -AllowClobber
+#Ensure-Module -ModuleName "PowerShellGet"
+#Ensure-Module -ModuleName "PackageManagement"
 Ensure-PackageProvider -ProviderName "NuGet" -MinimumVersion $nuGetProviderMinVersion
+
+if (-not (Test-Path -Path $toolsPath -PathType Container)) {
+    New-Item -Path $toolsPath -ItemType Directory -Force | Out-Null
+    Write-Host "Directory created: $toolsPath"
+} else {
+    Write-Host "Directory already exists: $toolsPath"
+}
 
 #Downloading the correct ZABBIX version for the system architecture
 if ($env:PROCESSOR_ARCHITECTURE -eq "AMD64") {
 #Downloading the correct ZABBIX version for the system architecture
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-Invoke-WebRequest -Uri "https://cdn.zabbix.com/zabbix/binaries/stable/7.0/$version/zabbix_agent-$version-windows-amd64-openssl.msi"  -OutFile "$env:TEMP\ZabbixAgent-v$version.msi"
+Invoke-WebRequest -Uri "https://cdn.zabbix.com/zabbix/binaries/stable/$version/$release/zabbix_agent-$release-windows-amd64-openssl.msi"  -OutFile "C:\Tools\ZabbixAgent-v$release.msi"
 } else {
 # Version for 32-bit architecture
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-Invoke-WebRequest -Uri "https://cdn.zabbix.com/zabbix/binaries/stable/7.0/$version/zabbix_agent-$version-windows-i386-openssl.msi" -OutFile "$env:TEMP\ZabbixAgent-v$version.msi"
+Invoke-WebRequest -Uri "https://cdn.zabbix.com/zabbix/binaries/stable/$version/$release/zabbix_agent-$release-windows-i386-openssl.msi" -OutFile "C:\Tools\ZabbixAgent-v$release.msi"
 }
+
 #Install the downloaded version of ZABBIX for the appropriate system architecture
-Start-Process -FilePath "$env:TEMP\ZabbixAgent-v$version.msi" -ArgumentList "/qn SERVER=$ZabbixServer SERVERACTIVE=$ZabbixServerActive HOSTNAME=$env:computername ListenPort=$ListenPort EnablePath=$EnablePath" -Wait
+Start-Process -FilePath "C:\Tools\ZabbixAgent-v$release.msi" -ArgumentList "/qn SERVER=$ZabbixServer SERVERACTIVE=$ZabbixServerActive HOSTNAME=$env:computername ListenPort=$ListenPort EnablePath=$EnablePath" -Wait
 
 ############ Zabbix Agent Service #################
 Stop-ZabbixAgentService -ServiceName $ServiceName
@@ -260,11 +238,11 @@ $ConfigContent | ForEach-Object {
 if ($HostInterface -like '10.145.*' -and $Model -eq '3') {
     $ConfigContent | ForEach-Object {
 	    if($_ -eq "Server="){
-		    $ConfigContent[$ConfigContent.IndexOf($_)] += "[Zabbix_Proxy_Server_IP]"
+		    $ConfigContent[$ConfigContent.IndexOf($_)] += "10.145.162.105"
 	    }
 
         if($_ -eq "ServerActive="){
-		    $ConfigContent[$ConfigContent.IndexOf($_)] += "[Zabbix_Proxy_Server_IP]"
+		    $ConfigContent[$ConfigContent.IndexOf($_)] += "10.145.162.105"
 	    }
 
         if($_ -eq "HostMetaData="){
@@ -274,11 +252,11 @@ if ($HostInterface -like '10.145.*' -and $Model -eq '3') {
 } elseif ($HostInterface -like '10.30.*' -and $Model -eq '3') {
     $ConfigContent | ForEach-Object {
 	    if($_ -eq "Server="){
-		    $ConfigContent[$ConfigContent.IndexOf($_)] += "[Zabbix_Server_IP]"
+		    $ConfigContent[$ConfigContent.IndexOf($_)] += "10.30.8.4"
 	    }
 
         if($_ -eq "ServerActive="){
-		    $ConfigContent[$ConfigContent.IndexOf($_)] += "[Zabbix_Server_IP]"
+		    $ConfigContent[$ConfigContent.IndexOf($_)] += "10.30.8.4"
 	    }
 
         if($_ -eq "HostMetaData="){
@@ -288,11 +266,11 @@ if ($HostInterface -like '10.145.*' -and $Model -eq '3') {
 } else {
     $ConfigContent | ForEach-Object {
 	    if($_ -eq "Server="){
-		    $ConfigContent[$ConfigContent.IndexOf($_)] += "[Zabbix_Proxy_Server_IP]"
+		    $ConfigContent[$ConfigContent.IndexOf($_)] += "10.145.162.105"
 	    }
 
         if($_ -eq "ServerActive="){
-		    $ConfigContent[$ConfigContent.IndexOf($_)] += "[Zabbix_Proxy_Server_IP]"
+		    $ConfigContent[$ConfigContent.IndexOf($_)] += "10.145.162.105"
 	    }
 
         if($_ -eq "HostMetaData="){
