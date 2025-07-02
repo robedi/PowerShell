@@ -1,3 +1,4 @@
+![Static Badge](https://img.shields.io/badge/license-MIT-blue) ![Static Badge](https://img.shields.io/badge/build-passing-brightgreen)
 # Zabbix Agent Unified Installer for Windows
 
 This PowerShell script automates the detection, installation, and configuration of Zabbix Agent (either classic Agent or Agent 2) on Windows systems. It ensures the appropriate version is installed based on system architecture and administrator input, and handles configuration and service state cleanly.
