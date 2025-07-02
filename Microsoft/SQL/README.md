@@ -1,3 +1,4 @@
+![Static Badge](https://img.shields.io/badge/license-MIT-blue) ![Static Badge](https://img.shields.io/badge/build-passing-brightgreen)
 # Pivot CSV Importer
 
 A PowerShell utility to incrementally import “pivot” CSV files into SQL Server (default or SQLEXPRESS) tables.  
