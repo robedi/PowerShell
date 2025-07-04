@@ -28,7 +28,7 @@
 
         Runs the script against the default-configured folder and SQL instance.  
         On first run, drops any existing pivot tables and imports all CSVs.  
-        On later runs, only re-imports files that have changed, updating the metadata log.
+        On later runs, imports new files and only re-imports files that have changed, updating the metadata log.
 
     .INPUTS
         None.  The script does not accept pipeline input.
