@@ -44,6 +44,7 @@
         https://github.com/RoBeDi/PowerShell
  #>
 
+
 [CmdletBinding()]
 param (
 [Parameter()]
@@ -69,7 +70,7 @@ if (-not ([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdent
     Write-Warning "This script requires elevated privileges (Run as Administrator). Relaunching in elevated PowerShell console..."
     
     $script = $MyInvocation.MyCommand.Path
-    Start-Process powershell.exe -Verb RunAs -ArgumentList "-File `"$script`""
+    Start-Process powershell_ise.exe -Verb RunAs -ArgumentList "-File `"$script`""
     exit
 }
 
@@ -123,17 +124,33 @@ function Start-ZabbixAgentService {
     
     # Start the service
     Write-Host "Starting the service: $ServiceName"
-    Start-Service -Name $ServiceName
+    try {
+        Start-Service -Name $ServiceName -ErrorAction Stop
+        $maxWait = 30  # seconds
+        $waited = 0
 
-    # Confirm the service has started
-    $service = Get-Service -Name $ServiceName
-    while ($service.Status -ne 'Running') {
-        Write-Host "Waiting for service to start..."
-        Start-Sleep -Seconds 2
-        Start-Service -Name $ServiceName -ErrorAction SilentlyContinue
-        $service = Get-Service -Name $ServiceName
+        do {
+            Start-Sleep -Seconds 2
+            $service = Get-Service -Name $ServiceName -ErrorAction SilentlyContinue
+            $waited += 2
+            Write-Host "Waiting for service to start... ($waited sec)"
+        } while ($service.Status -ne 'Running' -and $waited -lt $maxWait)
+
+        if ($service.Status -eq 'Running') {
+            Write-Host "Service $ServiceName is running."
+        } else {
+            throw "Service $ServiceName failed to start within timeout."
+        }
+    } catch {
+        Write-Warning "Failed to start service $ServiceName. Attempting cleanup and reinstall."
+        sc.exe delete "$ServiceName" | Out-Null
+        Start-Sleep -Seconds 5
+        if ($ServiceName -eq "Zabbix Agent") {
+            Install-ZabbixAgent1
+        } elseif ($ServiceName -eq "Zabbix Agent 2") {
+            Install-ZabbixAgent2
+        }
     }
-    Write-Host "Service $ServiceName is running."
 }
 
 function Ensure-Module {
@@ -209,7 +226,7 @@ if ($ForceAgent) {
 } elseif ($installedAgent -ne "None") {
     $preferredAgent = $installedAgent
 } else {
-    $preferredAgent = "Agent2"
+    $preferredAgent = "Agent1"
 }
 
 function Configure-ZabbixAgent {
@@ -249,16 +266,18 @@ function Configure-ZabbixAgent {
     }
 
     Set-Content $ConfigPath -Value $ConfigContent
-    Write-Host " DONE" -ForegroundColor Green
+    #Write-Host " DONE" -ForegroundColor Green
 }
 
 function Install-ZabbixAgent1 {
     Stop-ZabbixAgentService -ServiceName "Zabbix Agent"
-    Write-Host "Installing Zabbix Agent..." -NoNewline
-    $msi = "$env:TEMP\ZabbixAgent-v$version.msi"
+    Write-Host "Installing Zabbix Agent..."
+    $msi = "$toolsPath\ZabbixAgent-v$version.msi"
     $uri = "https://cdn.zabbix.com/zabbix/binaries/stable/$shortVersion/$version/zabbix_agent-$version-windows-$arch-openssl.msi"
     Invoke-WebRequest -Uri $uri -OutFile $msi
     Start-Process -FilePath $msi -ArgumentList "/qn SERVER=$ZabbixServer SERVERACTIVE=$ZabbixServerActive HOSTNAME=$env:COMPUTERNAME ListenPort=$ListenPort EnablePath=$EnablePath" -Wait
+    Start-Sleep -Seconds 5
+    Stop-ZabbixAgentService -ServiceName "Zabbix Agent"
     Invoke-WebRequest -Uri $templateUri -OutFile "$env:TEMP\template_zabbix_agentd.conf"
     Remove-Item -Path $agentConfFile1 -Force -ErrorAction SilentlyContinue
     Copy-Item "$env:TEMP\template_zabbix_agentd.conf" -Destination $agentConfFile1 -Force
@@ -270,11 +289,13 @@ function Install-ZabbixAgent1 {
 
 function Install-ZabbixAgent2 {
     Stop-ZabbixAgentService -ServiceName "Zabbix Agent 2"
-    Write-Host "Installing Zabbix Agent 2..." -NoNewline
+    Write-Host "Installing Zabbix Agent 2..."
     $msi = "$toolsPath\ZabbixAgent2-v$version.msi"
     $uri = "https://cdn.zabbix.com/zabbix/binaries/stable/$shortVersion/$version/zabbix_agent2-$version-windows-$arch-openssl.msi"
     Invoke-WebRequest -Uri $uri -OutFile $msi
     Start-Process -FilePath $msi -ArgumentList "/qn SERVER=$ZabbixServer SERVERACTIVE=$ZabbixServerActive HOSTNAME=$env:COMPUTERNAME ListenPort=$ListenPort EnablePath=$EnablePath" -Wait
+    Start-Sleep -Seconds 5
+    Stop-ZabbixAgentService -ServiceName "Zabbix Agent 2"
     Invoke-WebRequest -Uri $templateUri2 -OutFile "$env:TEMP\template_zabbix_agent2.conf"
     Remove-Item -Path $agentConfFile2 -Force -ErrorAction SilentlyContinue
     Copy-Item "$env:TEMP\template_zabbix_agent2.conf" -Destination $agentConfFile2 -Force
