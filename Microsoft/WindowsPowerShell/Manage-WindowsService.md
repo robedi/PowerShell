@@ -1,4 +1,3 @@
-````markdown
 # Manage-WindowsService.ps1
 
 PowerShell script to manage Windows services: start, stop, and optionally reinstall them if start-up fails. This script is reusable, modular, and customizable for any Windows service—not just Zabbix.
