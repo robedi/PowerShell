@@ -78,5 +78,3 @@ MIT License. Feel free to modify and use in commercial or personal projects. Jus
 ## 🙌 Contributions
 
 Pull requests are welcome! If you find a bug or want to suggest a feature, feel free to open an issue.
-
-```
