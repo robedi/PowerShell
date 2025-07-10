@@ -63,6 +63,7 @@ $sqlBackupFolderLocation = "\\ServerStorage\Share\DatabaseBackup" # TO DO: Provi
 $fileBackupLocation = "\\ServerStorage\Share\FileBackup" # TO DO: Provide the network share to store the file backup
 $downloadDirectory = "\\ServerStorage\Share" # TO DO: Provide the network share where the Octopus update files are located. Alternatively, change this to "${env:Temp}" to use the local temp directory
 $settleTimeInMinutes = 30 # Configurable pause time between installations
+$logFile = "$installPath\octopus_update.txt" # Installation status log file
 
 # This is the default install location, but yours could be different
 $installPath = "${env:ProgramFiles}\Octopus Deploy\Octopus"
@@ -77,6 +78,14 @@ $upgradeVersion = $versions[-1].Version
 # Split versions into arrays of numbers for comparison
 $versionSplit = $currentVersion -Split "\."
 $upgradeSplit = $upgradeVersion -Split "\."
+
+function Log-Message {
+    param([string]$message)
+    $timestamp   = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+    $fullMessage = "$timestamp - $message"
+    Write-Host   $fullMessage
+    Add-Content -Path $logFile -Value $fullMessage
+}
 
 # Function to compare version numbers
 function Compare-Version($currentVersion, $upgradeVersion) {
@@ -113,20 +122,25 @@ function Set-OctopusOutOfMaintenanceMode {
                     -Headers @{'X-Octopus-ApiKey' = $apiKey} `
                     -Body (@{ Id = "maintenance"; IsInMaintenanceMode = $false } | ConvertTo-Json)
                 Write-Host "Octopus is successfully out of maintenance mode." -ForegroundColor Green
+                Log-Message "INFO - Octopus is successfully out of maintenance mode."
                 $success = $true
             } else {
                 Write-Host "Octopus is already out of maintenance mode." -ForegroundColor Yellow
+                Log-Message "WARNING - Octopus is already out of maintenance mode."
                 $success = $true
             }
         }
         catch {
             Write-Host "Failed to connect to the server. Error: $_" -ForegroundColor Red
+            Log-Message "ERROR - Failed to connect to the server. Error: $_"
             $retryCount++
             if ($retryCount -lt $maxRetries) {
                 Write-Host "Retrying in $retryDelaySeconds seconds..."
+                Log-Message "INFO - Retrying in $retryDelaySeconds seconds..."
                 Start-Sleep -Seconds $retryDelaySeconds
             } else {
                 Write-Host "Maximum retry attempts reached. Could not exit maintenance mode." -ForegroundColor Red
+                Log-Message "ERROR - Maximum retry attempts reached. Could not exit maintenance mode."
                 Exit 1
             }
         }
@@ -148,9 +162,11 @@ foreach ($msiFilename in $stagedVersions) {
 
     if (-Not (Test-Path $destinationPath)) {
         Write-Host "Downloading $msiFilename"
+        Log-Message "INFO - Downloading $msiFilename to $downloadDirectory\$msiFilename"
         Start-BitsTransfer -Source "https://download.octopusdeploy.com/octopus/$msiFilename" -Destination "$downloadDirectory\$msiFilename"
     } else {
         Write-Host "File $msiFilename already exists. No download needed."
+        Log-Message "INFO - File $msiFilename already exists. No download needed."
     }
 
     # Place Octopus into maintenance mode
@@ -164,6 +180,7 @@ foreach ($msiFilename in $stagedVersions) {
 
     if (Compare-Version $versionSplit $upgradeSplit -eq -1) {
         Write-Host "Major version upgrade has been detected, backing up all the folders"
+        Log-Message "INFO - Major version upgrade has been detected, backing up folders Artifacts, EventExports, Packages, TaskLogs and Telemetry"
 
         $serverFolders = Invoke-RestMethod -Uri "$url/api/configuration/server-folders/values" -Headers @{'X-Octopus-ApiKey' = $apiKey}
 
@@ -173,6 +190,7 @@ foreach ($msiFilename in $stagedVersions) {
             if ($msiExitCode -ge 8) 
             {
                 Throw "Unable to copy files to $fileBackupLocation\Artifacts"
+                Log-Message "WARNING - Unable to copy files to $fileBackupLocation\Artifacts"
             }
         }
 
@@ -182,6 +200,7 @@ foreach ($msiFilename in $stagedVersions) {
             if ($msiExitCode -ge 8) 
             {
                 Throw "Unable to copy files to $fileBackupLocation\EventExports"
+                Log-Message "WARNING - Unable to copy files to $fileBackupLocation\EventExports"
             }
         }
 
@@ -191,6 +210,7 @@ foreach ($msiFilename in $stagedVersions) {
             if ($msiExitCode -ge 8) 
             {
                 Throw "Unable to copy files to $fileBackupLocation\Packages"
+                Log-Message "WARNING - Unable to copy files to $fileBackupLocation\Packages"
             }
         }
 
@@ -200,6 +220,7 @@ foreach ($msiFilename in $stagedVersions) {
             if ($msiExitCode -ge 8) 
             {
                 Throw "Unable to copy files to $fileBackupLocation\TaskLogs"
+                Log-Message "WARNING - Unable to copy files to $fileBackupLocation\TaskLogs"
             }
         }
 
@@ -209,6 +230,7 @@ foreach ($msiFilename in $stagedVersions) {
             if ($msiExitCode -ge 8) 
             {
                 Throw "Unable to copy files to $fileBackupLocation\Telemetry"
+                Log-Message "WARNING - Unable to copy files to $fileBackupLocation\Telemetry"
             }
         }
     }
@@ -220,25 +242,31 @@ foreach ($msiFilename in $stagedVersions) {
     # Check if the SqlServer module is installed
     if (-not (Get-Module -ListAvailable -Name SqlServer)) {
         Write-Host "SqlServer module not found. Installing the module..." -ForegroundColor Yellow
+        Log-Message "INFO - Installing SqlServer module"
 
         # Install the SqlServer module from the PowerShell Gallery
         Install-Module -Name SqlServer -Force -AllowClobber
 
         Write-Host "SqlServer module installed successfully." -ForegroundColor Green
+        Log-Message "INFO - SqlServer module installed successfully."
     } else {
         Write-Host "SqlServer module is already installed." -ForegroundColor Green
+        Log-Message "INFO - SqlServer module is already installed."
     }
 
     # Import the SqlServer module
     Write-Host "Importing the SqlServer module..."
+    Log-Message "INFO - Importing the SqlServer module"
     Import-Module -Name SqlServer
 
     # Verify that the module was imported successfully
     if (Get-Module -Name SqlServer) {
         Write-Host "SqlServer module imported successfully." -ForegroundColor Green
+        Log-Message "INFO - SqlServer module imported successfully."
     } else {
         Write-Host "Failed to import the SqlServer module." -ForegroundColor Red
         Write-Host "Try to fix the issue first and re-run the script. Exiting now in 5 seconds..."
+        Log-Message "ERROR - Unable to import the SqlServer module. Try to fix the issue first and re-run the script."
         Start-Sleep -Seconds 5
         Exit
     }
@@ -267,6 +295,7 @@ foreach ($msiFilename in $stagedVersions) {
 
         Write-Host "Successfully backed up the database $octopusDeployDatabaseName"
         Write-Host "Closing the connection"
+        Log-Message "INFO - Successfully backed up the database $octopusDeployDatabaseName"
         $sqlConnection.Close()
     }
     catch {
@@ -277,6 +306,7 @@ foreach ($msiFilename in $stagedVersions) {
 
         # Place Octopus out of maintenance mode
         Set-OctopusOutOfMaintenanceMode -url $url -apiKey $apiKey # Placing Octopus out of maintenance mode
+        Log-Message "ERROR - Placing Octopus out of maintenance mode."
 
         exit 1
     }
@@ -284,8 +314,10 @@ foreach ($msiFilename in $stagedVersions) {
     # Running the installer
     $msiToInstall = "$downloadDirectory\$msiFilename"
     Write-Host "Installing $msiToInstall"
+    Log-Message "INFO - Installing $msiToInstall"
     $msiExitCode = (Start-Process -FilePath "msiexec.exe" -ArgumentList "/i $msiToInstall /quiet" -Wait -PassThru).ExitCode 
-    Write-Output "Server MSI installer returned exit code $msiExitCode" 
+    Write-Output "Server MSI installer returned exit code $msiExitCode"
+    Log-Message "ERROR - Server MSI installer returned exit code $msiExitCode"
 
     # Upgrade database and restart service
     & $serverExe database --instance="OctopusServer" --upgrade
@@ -296,16 +328,21 @@ foreach ($msiFilename in $stagedVersions) {
     Write-Host "Waiting for the server to settle down..."
     Start-Sleep -Seconds 10 # 10 seconds wait for the server to settle down
     Write-Host "Resuming after wait time."
+    Log-Message "INFO - Resuming Octopus operations"
 
     # Usage of the function after each upgrade
     Set-OctopusOutOfMaintenanceMode -url $url -apiKey $apiKey # Placing Octopus out of maintenance mode
+    Log-Message "INFO - Placing Octopus out of maintenance mode."
 
     # Remove the downloaded MSI file
     Remove-Item "$downloadDirectory\$msiFilename"
+    Log-Message "INFO - Deleting $downloadDirectory\$msiFilename"
 
     # Pause between updates to let the server settle
     Write-Host "Pausing for $settleTimeInMinutes minutes before the next update."
+    Log-Message "INFO - Pausing for $settleTimeInMinutes minutes before the next update."
     Start-Sleep -Seconds ($settleTimeInMinutes * 60)
 }
 
 Write-Host "Upgrade process completed successfully!"
+Log-Message "INFO - Upgrade process has been completed successfully!"
